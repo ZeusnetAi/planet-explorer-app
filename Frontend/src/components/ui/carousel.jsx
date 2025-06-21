@@ -1,9 +1,9 @@
 "use client";
 import * as React from "react"
-import useEmblaCarousel from "embla-carousel-react";
-import { ArrowLeft, ArrowRight } from "lucide-react"
+import useEmblaCarousel from "embla-carousel-react"
+import { ArrowLeftIcon, ArrowRightIcon } from "lucide-react"
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils.js"
 import { Button } from "@/components/ui/button"
 
 const CarouselContext = React.createContext(null)
@@ -161,7 +161,7 @@ function CarouselPrevious({
       disabled={!canScrollPrev}
       onClick={scrollPrev}
       {...props}>
-      <ArrowLeft />
+      <ArrowLeftIcon />
       <span className="sr-only">Previous slide</span>
     </Button>
   );
@@ -186,7 +186,7 @@ function CarouselNext({
       disabled={!canScrollNext}
       onClick={scrollNext}
       {...props}>
-      <ArrowRight />
+      <ArrowRightIcon />
       <span className="sr-only">Next slide</span>
     </Button>
   );
