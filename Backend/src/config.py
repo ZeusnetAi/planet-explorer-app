@@ -16,9 +16,14 @@ class Config:
     UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'uploads')
     ALLOWED_EXTENSIONS = {'shp', 'shx', 'dbf', 'prj', 'zip'}
     
-    # Cache Configuration
+    # Cache Configuration - Otimizado para performance
     CACHE_TYPE = 'simple'
-    CACHE_DEFAULT_TIMEOUT = 300
+    CACHE_DEFAULT_TIMEOUT = 600  # 10 minutos
+    CACHE_KEY_PREFIX = 'planet_api_'
+    
+    # Performance Configuration
+    JSON_SORT_KEYS = False  # Melhora performance do JSON
+    JSONIFY_PRETTYPRINT_REGULAR = False  # Reduz overhead do JSON
     
     # Logging Configuration
     LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
@@ -31,10 +36,12 @@ class DevelopmentConfig(Config):
     """Configuração para desenvolvimento"""
     DEBUG = True
     LOG_LEVEL = 'DEBUG'
+    CACHE_DEFAULT_TIMEOUT = 60  # 1 minuto em desenvolvimento
 
 class ProductionConfig(Config):
     """Configuração para produção"""
     DEBUG = False
+    CACHE_DEFAULT_TIMEOUT = 1800  # 30 minutos em produção
     
     @classmethod
     def init_app(cls, app):

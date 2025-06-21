@@ -1,0 +1,91 @@
+# Git
+.git
+.gitignore
+README.md
+DEPLOY.md
+
+# Docker
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Node.js (Frontend)
+Frontend/node_modules
+Frontend/npm-debug.log*
+Frontend/yarn-debug.log*
+Frontend/yarn-error.log*
+Frontend/.pnpm-debug.log*
+
+# Python (Backend)
+Backend/venv
+Backend/__pycache__
+Backend/*.pyc
+Backend/*.pyo
+Backend/*.pyd
+Backend/.Python
+Backend/env
+Backend/pip-log.txt
+Backend/pip-delete-this-directory.txt
+Backend/.tox
+Backend/.coverage
+Backend/.coverage.*
+Backend/.cache
+Backend/nosetests.xml
+Backend/coverage.xml
+Backend/*.cover
+Backend/.hypothesis
+Backend/.pytest_cache
+Backend/.mypy_cache
+Backend/.dmypy.json
+Backend/dmypy.json
+
+# Logs
+Backend/logs
+*.log
+
+# Database
+Backend/instance
+Backend/database
+*.db
+*.sqlite
+
+# Uploads
+Backend/uploads
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Scripts
+*.bat
+*.sh
+deploy.sh
+test-deploy.sh
+setup-ssl.sh
+maintenance.sh
+
+# SSL certificates
+ssl/
+
+# Temporary files
+*.tmp
+*.temp 

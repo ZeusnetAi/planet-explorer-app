@@ -29,6 +29,7 @@ Pillow
 python-dateutil
 pytz
 tzdata
+psutil
 
 # Validação e formatação
 click

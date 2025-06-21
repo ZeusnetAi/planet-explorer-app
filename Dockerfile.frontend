@@ -1,0 +1,37 @@
+# Dockerfile para o Frontend React
+FROM node:18-alpine AS builder
+
+# Instalar pnpm
+RUN npm install -g pnpm
+
+# Definir diretório de trabalho
+WORKDIR /app
+
+# Copiar arquivos de dependências
+COPY Frontend/package.json Frontend/pnpm-lock.yaml ./
+
+# Instalar dependências
+RUN pnpm install --frozen-lockfile
+
+# Copiar código fonte
+COPY Frontend/src/ ./src/
+COPY Frontend/public/ ./public/
+COPY Frontend/vite.config.js Frontend/index.html ./
+
+# Build da aplicação
+RUN pnpm run build
+
+# Stage de produção com Nginx
+FROM nginx:alpine
+
+# Copiar build do stage anterior
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Copiar configuração do Nginx
+COPY nginx.conf /etc/nginx/nginx.conf
+
+# Expor porta
+EXPOSE 80
+
+# Comando para iniciar Nginx
+CMD ["nginx", "-g", "daemon off;"] 
