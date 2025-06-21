@@ -3,6 +3,8 @@ Flask
 flask-cors
 Flask-SQLAlchemy
 Werkzeug
+Flask-Migrate==4.0.7
+Flask-Caching
 
 # Banco de dados
 SQLAlchemy
@@ -19,7 +21,7 @@ pandas
 # Geoprocessamento
 pyogrio
 pyproj
-geopandas
+geopandas==1.0.1
 
 # Utilitários
 python-dateutil
@@ -45,3 +47,4 @@ typing_extensions
 
 # Desenvolvimento (opcional)
 python-dotenv
+gunicorn==22.0.0
