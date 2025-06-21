@@ -23,6 +23,7 @@ pyogrio
 pyproj
 geopandas==1.0.1
 rasterio
+Pillow
 
 # Utilitários
 python-dateutil
