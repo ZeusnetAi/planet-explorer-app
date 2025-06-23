@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { Button } from '@/components/ui/button.jsx'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card.jsx'
 import { Input } from '@/components/ui/input.jsx'
@@ -47,12 +47,20 @@ function App() {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [activeTab, setActiveTab] = useState('basemaps');
 
+  // Memoiza arrays estáticos para evitar recriações
+  const years = useMemo(() => Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i), []);
+  const months = useMemo(() => Array.from({ length: 12 }, (_, i) => ({ 
+    value: i + 1, 
+    name: new Date(0, i).toLocaleString('default', { month: 'long' }) 
+  })), []);
+
   useEffect(() => {
     fetchItemTypes()
     fetchBasemapSeries()
   }, [])
 
-  const fetchBasemapSeries = async () => {
+  // Memoiza as funções de fetch para evitar recriações
+  const fetchBasemapSeries = useCallback(async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/basemap/series`);
       const data = await response.json();
@@ -64,14 +72,9 @@ function App() {
     } catch (error) {
       console.error('Erro ao buscar séries de basemap:', error);
     }
-  };
+  }, []);
 
-  const handleSeriesChange = (seriesId) => {
-    setSelectedSeriesId(seriesId);
-    setBasemapQuads([]);
-  };
-
-  const fetchItemTypes = async () => {
+  const fetchItemTypes = useCallback(async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/planet/item-types`)
       const data = await response.json()
@@ -85,15 +88,20 @@ function App() {
       console.error('Erro ao buscar tipos de item:', error)
       setItemTypes([]);
     }
-  }
+  }, []);
 
-  const handleSearch = async () => {
+  // Memoiza handlers para evitar recriações
+  const handleSeriesChange = useCallback((seriesId) => {
+    setSelectedSeriesId(seriesId);
+    setBasemapQuads([]);
+  }, []);
+
+  const handleSearch = useCallback(async () => {
     if (!searchParams.geometry) {
       toast.error("Por favor, carregue uma geometria primeiro.");
       return;
     }
     
-    // Determina qual aba está ativa para controlar o estado de loading correto
     const isBasemapTab = !!selectedSeriesId;
     
     if (isBasemapTab) {
@@ -108,7 +116,6 @@ function App() {
     try {
       let finalResults = [];
       if (isBasemapTab) {
-        // Etapa 1: Obter o ID do mosaico
         const mosaicResponse = await fetch(`${API_BASE_URL}/api/basemap/mosaics?series_id=${selectedSeriesId}&year=${selectedYear}&month=${selectedMonth}`);
         
         if (!mosaicResponse.ok) {
@@ -123,7 +130,6 @@ function App() {
           throw new Error('Nenhum mosaico correspondente encontrado para a série e período selecionados.');
         }
 
-        // Etapa 2: Buscar os quads com o ID do mosaico
         const quadsResponse = await fetch(`${API_BASE_URL}/api/basemap/quads`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -142,7 +148,6 @@ function App() {
         setBasemapQuads(finalResults);
 
       } else {
-        // Lógica para busca de imagens (scenes) - já estava correta, mas reorganizando
         const payload = {
             geometry: searchParams.geometry,
             item_types: searchParams.itemTypes,
@@ -180,9 +185,9 @@ function App() {
         setLoading(false);
       }
     }
-  };
+  }, [searchParams, selectedSeriesId, selectedYear, selectedMonth]);
 
-  const handleImageDownload = async (item, assetType) => {
+  const handleImageDownload = useCallback(async (item, assetType) => {
     const finalAssetType = typeof assetType === 'string' ? assetType : 'ortho_visual';
     const assetId = `${item.id}-${finalAssetType}`;
 
@@ -221,43 +226,40 @@ function App() {
       alert(`Erro no download: ${error.message}`);
       setActivatingAssets(prev => ({ ...prev, [assetId]: false }));
     }
-  }
+  }, []);
 
-  const handleImagePreview = (item) => {
+  const handleImagePreview = useCallback((item) => {
     setSelectedImage(item)
     setPreviewModalOpen(true)
-  }
+  }, []);
 
-  const handleShowOnMap = (item) => {
+  const handleShowOnMap = useCallback((item) => {
     setShowMap(true);
     setMapPreviewItem(prev => (prev && prev.id === item.id ? null : item));
     setBasemapPreviewItems([]);
-  };
+  }, []);
 
-  const handleShowBasemapOnMap = (quad) => {
+  const handleShowBasemapOnMap = useCallback((quad) => {
     setBasemapPreviewItems(prevItems => {
       const isAlreadyInPreview = prevItems.some(item => item.id === quad.id);
 
       if (isAlreadyInPreview) {
-        // Remove o quad da lista de preview
         return prevItems.filter(item => item.id !== quad.id);
       } else {
-        // Adiciona o quad na lista de preview
         return [...prevItems, quad];
       }
     });
-  };
+  }, []);
 
-  const handleGeometryChange = (geom) => {
+  const handleGeometryChange = useCallback((geom) => {
     setSearchParams(prev => ({ ...prev, geometry: geom }));
-    // Limpa os resultados e previews ao carregar nova geometria
     setSearchResults([]);
     setBasemapQuads([]);
     setMapPreviewItem(null);
     setBasemapPreviewItems([]);
-  };
+  }, []);
 
-  const handlePreview = (itemToToggle) => {
+  const handlePreview = useCallback((itemToToggle) => {
     setPreviewItems(prevItems => {
       const itemExists = prevItems.some(item => item.id === itemToToggle.id);
       if (itemExists) {
@@ -266,10 +268,63 @@ function App() {
         return [...prevItems, itemToToggle];
       }
     });
-  };
+  }, []);
 
-  const years = Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i);
-  const months = Array.from({ length: 12 }, (_, i) => ({ value: i + 1, name: new Date(0, i).toLocaleString('default', { month: 'long' }) }));
+  // Memoiza handlers para mudanças de parâmetros
+  const handleStartDateChange = useCallback((value) => {
+    setSearchParams(prev => ({ ...prev, startDate: value }));
+  }, []);
+
+  const handleEndDateChange = useCallback((value) => {
+    setSearchParams(prev => ({ ...prev, endDate: value }));
+  }, []);
+
+  const handleCloudCoverChange = useCallback((value) => {
+    setSearchParams(prev => ({ ...prev, maxCloudCover: value[0] }));
+  }, []);
+
+  const handleItemTypeToggle = useCallback((itemId) => {
+    setSearchParams(prev => {
+      const newTypes = prev.itemTypes.includes(itemId)
+        ? prev.itemTypes.filter(t => t !== itemId)
+        : [...prev.itemTypes, itemId];
+      return { ...prev, itemTypes: newTypes };
+    });
+  }, []);
+
+  const handleYearChange = useCallback((value) => {
+    setSelectedYear(parseInt(value, 10));
+  }, []);
+
+  const handleMonthChange = useCallback((value) => {
+    setSelectedMonth(parseInt(value, 10));
+  }, []);
+
+  // Memoiza componentes de resultado para evitar re-renderizações
+  const searchResultsList = useMemo(() => (
+    <div className="space-y-2">
+      {searchResults.map((item) => (
+        <ImageCard 
+          key={item.id} 
+          item={item} 
+          onDownload={handleImageDownload}
+          onPreview={handleImagePreview}
+          onShowOnMap={handleShowOnMap} 
+          isActivating={false}
+          activatingAssets={activatingAssets}
+          isPreviewingOnMap={mapPreviewItem?.id === item.id}
+        />
+      ))}
+    </div>
+  ), [searchResults, handleImageDownload, handleImagePreview, handleShowOnMap, activatingAssets, mapPreviewItem]);
+
+  const basemapResults = useMemo(() => (
+    <BasemapDownloader 
+      quads={basemapQuads} 
+      onShowOnMap={handleShowBasemapOnMap} 
+      basemapPreviewItems={basemapPreviewItems}
+    />
+  ), [basemapQuads, handleShowBasemapOnMap, basemapPreviewItems]);
 
   return (
     <div className="flex flex-col h-screen bg-background text-foreground overflow-hidden">
@@ -317,11 +372,16 @@ function App() {
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="year">Ano</Label>
-                          <Input id="year" type="number" value={selectedYear} onChange={e => setSelectedYear(parseInt(e.target.value, 10))} />
+                          <Input 
+                            id="year" 
+                            type="number" 
+                            value={selectedYear} 
+                            onChange={e => handleYearChange(e.target.value)} 
+                          />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="month">Mês</Label>
-                          <Select onValueChange={value => setSelectedMonth(parseInt(value, 10))} value={selectedMonth.toString()}>
+                          <Select onValueChange={handleMonthChange} value={selectedMonth.toString()}>
                             <SelectTrigger id="month">
                               <SelectValue />
                             </SelectTrigger>
@@ -345,11 +405,21 @@ function App() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="start-date">Data Inicial</Label>
-                          <Input id="start-date" type="date" value={searchParams.startDate} onChange={e => setSearchParams({ ...searchParams, startDate: e.target.value })} />
+                          <Input 
+                            id="start-date" 
+                            type="date" 
+                            value={searchParams.startDate} 
+                            onChange={e => handleStartDateChange(e.target.value)} 
+                          />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="end-date">Data Final</Label>
-                          <Input id="end-date" type="date" value={searchParams.endDate} onChange={e => setSearchParams({ ...searchParams, endDate: e.target.value })} />
+                          <Input 
+                            id="end-date" 
+                            type="date" 
+                            value={searchParams.endDate} 
+                            onChange={e => handleEndDateChange(e.target.value)} 
+                          />
                         </div>
                       </div>
                       <div className="space-y-2">
@@ -359,12 +429,7 @@ function App() {
                             <Button
                               key={item.id}
                               variant={searchParams.itemTypes.includes(item.id) ? 'secondary' : 'outline'}
-                              onClick={() => {
-                                const newTypes = searchParams.itemTypes.includes(item.id)
-                                  ? searchParams.itemTypes.filter(t => t !== item.id)
-                                  : [...searchParams.itemTypes, item.id];
-                                setSearchParams({ ...searchParams, itemTypes: newTypes });
-                              }}
+                              onClick={() => handleItemTypeToggle(item.id)}
                             >
                               {item.display_name}
                             </Button>
@@ -379,7 +444,7 @@ function App() {
                           max={100}
                           step={1}
                           value={[searchParams.maxCloudCover]}
-                          onValueChange={value => setSearchParams({ ...searchParams, maxCloudCover: value[0] })}
+                          onValueChange={handleCloudCoverChange}
                         />
                       </div>
                     </CardContent>
@@ -396,17 +461,7 @@ function App() {
             {/* Resultados da Busca */}
             <div className="mt-4">
               <h3 className="text-lg font-semibold mb-2">Resultados da Busca</h3>
-              {activeTab === 'basemaps' ? (
-                <BasemapDownloader 
-                  quads={basemapQuads} 
-                  onShowOnMap={handleShowBasemapOnMap} 
-                  basemapPreviewItems={basemapPreviewItems}
-                />
-              ) : (
-                <div className="space-y-2">
-                  {searchResults.map((item) => <ImageCard key={item.id} item={item} onShowOnMap={handleShowOnMap} isPreviewing={mapPreviewItem?.id === item.id}/>)}
-                </div>
-              )}
+              {activeTab === 'basemaps' ? basemapResults : searchResultsList}
             </div>
           </div>
         </div>

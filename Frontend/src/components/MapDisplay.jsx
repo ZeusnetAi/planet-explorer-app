@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { MapContainer, TileLayer, GeoJSON, useMap, ImageOverlay } from 'react-leaflet';
 import L from 'leaflet';
 import { MapPin, Layers } from 'lucide-react';
@@ -46,12 +46,13 @@ const MAP_LAYERS = {
 // Componente para controlar o zoom e centro do mapa
 const MapController = ({ geojson, previewItem, basemapPreview }) => {
   const map = useMap();
-  useEffect(() => {
+  
+  // Memoiza a função de ajuste de bounds para evitar recriações
+  const fitBounds = useCallback(() => {
     if (previewItem?.geometry) {
       const layer = L.geoJSON(previewItem.geometry);
       if (layer.getBounds().isValid()) map.fitBounds(layer.getBounds());
     } else if (basemapPreview?.bbox) {
-      // Reativa o zoom automático para o basemap
       const [minX, minY, maxX, maxY] = basemapPreview.bbox;
       const bounds = L.latLngBounds([[minY, minX], [maxY, maxX]]);
       if (bounds.isValid()) map.fitBounds(bounds);
@@ -60,6 +61,11 @@ const MapController = ({ geojson, previewItem, basemapPreview }) => {
       if (layer.getBounds().isValid()) map.fitBounds(layer.getBounds());
     }
   }, [geojson, previewItem, basemapPreview, map]);
+
+  useEffect(() => {
+    fitBounds();
+  }, [fitBounds]);
+  
   return null;
 };
 
@@ -103,9 +109,98 @@ const LayerControl = ({ selectedLayer, onLayerChange }) => {
   );
 };
 
+// Componente otimizado para renderizar ImageOverlays
+const OptimizedImageOverlays = ({ basemapPreviewItems }) => {
+  const map = useMap();
+  const imageLayersRef = useRef(new Map());
+  
+  // Memoiza os dados dos overlays para evitar recriações desnecessárias
+  const overlayData = useMemo(() => {
+    if (!basemapPreviewItems || basemapPreviewItems.length === 0) return [];
+    
+    return basemapPreviewItems.map(item => ({
+      id: item.id,
+      imageUrl: `/api/basemap/quad/preview?mosaic_id=${item.mosaic_id}&quad_id=${item.id}`,
+      bounds: [[item.bbox[1], item.bbox[0]], [item.bbox[3], item.bbox[2]]]
+    }));
+  }, [basemapPreviewItems]);
+
+  // Função para renderizar apenas os overlays visíveis
+  const renderVisibleOverlays = useCallback(() => {
+    if (!map || overlayData.length === 0) return;
+    
+    const bounds = map.getBounds();
+    const zoom = map.getZoom();
+    
+    // Remove overlays antigos que não estão mais visíveis
+    imageLayersRef.current.forEach((layer, id) => {
+      const data = overlayData.find(item => item.id === id);
+      if (!data || !bounds.intersects(L.latLngBounds(data.bounds))) {
+        map.removeLayer(layer);
+        imageLayersRef.current.delete(id);
+      }
+    });
+    
+    // Adiciona apenas overlays visíveis
+    overlayData.forEach(item => {
+      if (!imageLayersRef.current.has(item.id) && bounds.intersects(L.latLngBounds(item.bounds))) {
+        // Só renderiza se o zoom for adequado (evita renderizar tiles muito pequenos)
+        if (zoom >= 8) {
+          const imageOverlay = L.imageOverlay(item.imageUrl, item.bounds, {
+            opacity: 1,
+            zIndex: 10
+          });
+          imageOverlay.addTo(map);
+          imageLayersRef.current.set(item.id, imageOverlay);
+        }
+      }
+    });
+  }, [map, overlayData]);
+
+  useEffect(() => {
+    if (!map) return;
+    
+    // Renderiza overlays quando o mapa carrega
+    renderVisibleOverlays();
+    
+    // Re-renderiza quando o mapa se move
+    const handleMoveEnd = () => {
+      renderVisibleOverlays();
+    };
+    
+    map.on('moveend', handleMoveEnd);
+    map.on('zoomend', handleMoveEnd);
+    
+    return () => {
+      map.off('moveend', handleMoveEnd);
+      map.off('zoomend', handleMoveEnd);
+      // Limpa todos os overlays ao desmontar
+      imageLayersRef.current.forEach(layer => {
+        map.removeLayer(layer);
+      });
+      imageLayersRef.current.clear();
+    };
+  }, [map, renderVisibleOverlays]);
+
+  return null;
+};
+
 // Componente principal do Mapa
 const MapDisplay = ({ geojson, previewItem, basemapPreviewItems }) => {
   const [selectedLayer, setSelectedLayer] = useState('light');
+  
+  // Memoiza o estilo do GeoJSON para evitar recriações
+  const geojsonStyle = useMemo(() => ({
+    color: '#3b82f6',
+    weight: 2,
+    fillOpacity: 0.1
+  }), []);
+  
+  const previewStyle = useMemo(() => ({
+    color: '#ff7800',
+    weight: 2,
+    fillOpacity: 0.2
+  }), []);
 
   if (!geojson) {
     return (
@@ -127,32 +222,43 @@ const MapDisplay = ({ geojson, previewItem, basemapPreviewItems }) => {
         center={[-15.7801, -47.9292]}
         zoom={4}
         style={{ height: '100%', width: '100%' }}
+        // Adiciona configurações para melhor performance
+        preferCanvas={true}
+        zoomControl={false}
       >
         <TileLayer 
           url={currentLayer.url} 
-          attribution={currentLayer.attribution} 
+          attribution={currentLayer.attribution}
+          // Otimizações para tiles
+          updateWhenZooming={false}
+          updateWhenIdle={true}
         />
-        <GeoJSON data={geojson} style={() => ({ color: '#3b82f6', weight: 2, fillOpacity: 0.1 })} />
-        {previewItem && <GeoJSON data={previewItem.geometry} style={() => ({ color: '#ff7800', weight: 2, fillOpacity: 0.2 })} />}
         
-        {/* Renderiza múltiplos quadros de basemap */}
-        {basemapPreviewItems && basemapPreviewItems.map(item => {
-          const imageUrl = `/api/basemap/quad/preview?mosaic_id=${item.mosaic_id}&quad_id=${item.id}`;
-          const [minX, minY, maxX, maxY] = item.bbox;
-          const imageBounds = [[minY, minX], [maxY, maxX]];
-          
-          return (
-            <ImageOverlay
-              key={item.id}
-              url={imageUrl}
-              bounds={imageBounds}
-              opacity={1}
-              zIndex={10} 
-            />
-          );
-        })}
+        {/* GeoJSON com renderização otimizada */}
+        <GeoJSON 
+          data={geojson} 
+          style={() => geojsonStyle}
+          // Usa canvas para melhor performance
+          renderer={L.canvas({ padding: 0.5 })}
+        />
+        
+        {/* Preview item otimizado */}
+        {previewItem && (
+          <GeoJSON 
+            data={previewItem.geometry} 
+            style={() => previewStyle}
+            renderer={L.canvas({ padding: 0.5 })}
+          />
+        )}
+        
+        {/* Componente otimizado para ImageOverlays */}
+        <OptimizedImageOverlays basemapPreviewItems={basemapPreviewItems} />
 
-        <MapController geojson={geojson} previewItem={previewItem} basemapPreview={basemapPreviewItems.length > 0 ? basemapPreviewItems[0] : null} />
+        <MapController 
+          geojson={geojson} 
+          previewItem={previewItem} 
+          basemapPreview={basemapPreviewItems.length > 0 ? basemapPreviewItems[0] : null} 
+        />
       </MapContainer>
       
       <LayerControl 
