@@ -32,6 +32,8 @@ from src.routes.planet import planet_bp
 from src.routes.download import download_bp
 from src.routes.shp_simple import shp_bp
 from src.routes.health import health_bp
+from src.routes.wfs_proxy import wfs_proxy
+from src.routes.embargos import embargos_bp
 from src.utils.errors import handle_api_error, handle_validation_error, handle_not_found, handle_internal_server_error
 from src.utils.errors import APIError, ValidationError, QuotaError, RateLimitError
 from werkzeug.exceptions import NotFound
@@ -42,6 +44,8 @@ app.register_blueprint(planet_bp, url_prefix='/api/planet')
 app.register_blueprint(download_bp, url_prefix='/api/download')
 app.register_blueprint(shp_bp, url_prefix='/api/shp')
 app.register_blueprint(health_bp, url_prefix='/api')
+app.register_blueprint(wfs_proxy, url_prefix='/api')
+app.register_blueprint(embargos_bp, url_prefix='/api')
 
 # Registrar manipuladores de erro
 app.register_error_handler(APIError, handle_api_error)

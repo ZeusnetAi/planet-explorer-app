@@ -2,6 +2,7 @@
 
 # Script de Deploy para VPS Oracle ARM
 # Planet API Explorer
+# Uso rápido: wget -O- https://<SEU_REPO>/raw/main/deploy.sh | bash
 
 set -e
 
@@ -135,6 +136,15 @@ sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
 
 sudo chown -R $USER:$USER /opt/planet-explorer/ssl
 
+# Instalar Python3-pip e dependências do script de embargos
+log "Instalando dependências Python para script de embargos..."
+sudo apt install -y python3-pip python3-venv gdal-bin libgdal-dev
+pip3 install --break-system-packages -r Backend/requirements.txt
+
+# Baixar e converter embargos antes do build
+log "Baixando e convertendo embargos do IBAMA..."
+python3 Backend/src/utils/download_embargos.py
+
 # Construir e iniciar containers
 log "Construindo e iniciando containers..."
 docker-compose down --remove-orphans
@@ -239,6 +249,10 @@ chmod +x maintenance.sh
 if [ -f "setup-ssl.sh" ]; then
     (crontab -l 2>/dev/null; echo "0 12 * * * cd $PROJECT_DIR && ./setup-ssl.sh > /dev/null 2>&1") | crontab -
 fi
+
+# Agendar cron para atualizar embargos semanalmente (domingo 3h)
+log "Agendando atualização semanal dos embargos via cron..."
+(crontab -l 2>/dev/null; echo "0 3 * * 0 cd $PROJECT_DIR && python3 Backend/src/utils/download_embargos.py && cp Backend/src/static/embargos.geojson Backend/src/static/embargos.geojson") | crontab -
 
 # Informações finais
 echo ""

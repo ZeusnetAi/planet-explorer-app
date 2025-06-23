@@ -5,6 +5,7 @@ import { MapPin, Layers } from 'lucide-react';
 import { Button } from '@/components/ui/button.jsx';
 import { Card } from '@/components/ui/card.jsx';
 import 'leaflet/dist/leaflet.css';
+import LayerManager from './LayerManager.jsx';
 
 // Fix para ícones do Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -226,6 +227,8 @@ const MapDisplay = ({ geojson, previewItem, basemapPreviewItems }) => {
         preferCanvas={true}
         zoomControl={false}
       >
+        {/* Painel de camadas customizado */}
+        <LayerManager />
         <TileLayer 
           url={currentLayer.url} 
           attribution={currentLayer.attribution}

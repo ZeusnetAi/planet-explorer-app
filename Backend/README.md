@@ -125,3 +125,49 @@ O fluxo correto é:
 Se seguir esse padrão, seu deploy será simples, robusto e fácil de manter!
 
 ---
+
+## Pré-requisitos
+- Python 3.11+
+- Docker e Docker Compose
+- (Opcional) GDAL e dependências do sistema para geopandas
+
+## Instalação
+
+1. Clone o repositório:
+   ```
+   git clone <URL_DO_REPOSITORIO>
+   cd planet-explorer-app
+   ```
+
+2. Instale as dependências Python (apenas para uso do script de embargos):
+   ```
+   pip install -r Backend/requirements.txt --break-system-packages
+   ```
+
+3. Gere o arquivo de embargos (opcional, pois já vem pronto):
+   ```
+   python3 Backend/src/utils/download_embargos.py
+   ```
+
+4. Build e start dos containers:
+   ```
+   docker-compose up -d --build
+   ```
+
+5. Acesse a aplicação em `https://<SEU_DOMINIO>/`
+
+## Atualização automática dos embargos
+
+O script de atualização roda semanalmente via cron. Para rodar manualmente:
+```
+python3 Backend/src/utils/download_embargos.py
+```
+
+## Variáveis de ambiente
+Veja o arquivo `Backend/env.example` para exemplos de configuração.
+
+## Observações
+- O arquivo `embargos.geojson` pode ser grande. Para ambientes com pouca RAM, considere filtrar ou simplificar o dado.
+- O frontend já está configurado para consumir o endpoint `/api/embargos` automaticamente.
+
+---
