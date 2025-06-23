@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label.jsx'
 import { Badge } from '@/components/ui/badge.jsx'
 import { Upload, FileText, MapPin, AlertCircle, CheckCircle, Trash2 } from 'lucide-react'
 
-const API_BASE_URL = 'http://127.0.0.1:5000'
+const API_BASE_URL = ''
 
 export function ShpUploader({ onGeometryChange }) {
   const [isUploading, setIsUploading] = useState(false);

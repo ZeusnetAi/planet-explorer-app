@@ -73,3 +73,55 @@ O fluxo correto é:
 5.  **Renderizar as Imagens**: O componente `ImageOverlay` do Leaflet recebe as imagens PNG (uma para cada quad selecionado) vindas do nosso backend e as exibe no mapa, usando o `bbox` (bounding box) de cada quad para posicioná-las corretamente.
 
 **Resumo da Armadilha:** Não tente usar `TileLayer` para um único quad. A API não fornece uma URL de tiles para isso. Use `ImageOverlay` e aponte para a rota `/preview` do backend.
+
+---
+
+## 🛠️ Boas Práticas de Deploy e Solução de Problemas
+
+### Arquitetura Recomendada
+- Use **apenas um nginx reverso** (planet-nginx) para servir o build estático do React e fazer proxy para o backend.
+- O build do React deve ser copiado para uma pasta (ex: `nginx_html`) e montado como volume no serviço nginx.
+- O bloco correto no `nginx.conf` para servir o frontend é:
+  ```nginx
+  location / {
+      root /usr/share/nginx/html;
+      try_files $uri $uri/ /index.html;
+  }
+  ```
+- O backend Flask roda em outro container e é acessado via `/api` (proxy_pass).
+
+### Checklist para Deploy
+1. Gere o build do frontend:
+   ```bash
+   cd Frontend
+   npm run build
+   cp -r dist/* ../nginx_html/
+   ```
+2. No `docker-compose.yml`, monte o volume:
+   ```yaml
+   services:
+     nginx:
+       ...
+       volumes:
+         - ./nginx_html:/usr/share/nginx/html:ro
+   ```
+3. No `nginx.conf`, use o bloco acima para o frontend.
+4. Suba os containers:
+   ```bash
+   docker-compose up -d
+   ```
+
+### Solução de Problemas Comuns
+- **Página padrão do nginx:** O build do React não está em `nginx_html` ou o bloco `location /` está errado.
+- **Loop de redirecionamento:** Não use proxy_pass para um container frontend se não houver nginx lá dentro. Sirva estático!
+- **API não funciona no frontend:** O frontend deve fazer fetch para `/api/...` (caminho relativo), nunca para `localhost:5000`.
+- **Certificados SSL:** Devem estar em `ssl/` e montados no nginx.
+- **Sempre reinicie o nginx após mudanças:**
+   ```bash
+   docker-compose restart nginx
+   ```
+
+### Dica Final
+Se seguir esse padrão, seu deploy será simples, robusto e fácil de manter!
+
+---

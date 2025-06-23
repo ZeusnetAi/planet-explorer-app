@@ -137,7 +137,7 @@ const MapDisplay = ({ geojson, previewItem, basemapPreviewItems }) => {
         
         {/* Renderiza múltiplos quadros de basemap */}
         {basemapPreviewItems && basemapPreviewItems.map(item => {
-          const imageUrl = `http://127.0.0.1:5000/api/basemap/quad/preview?mosaic_id=${item.mosaic_id}&quad_id=${item.id}`;
+          const imageUrl = `/api/basemap/quad/preview?mosaic_id=${item.mosaic_id}&quad_id=${item.id}`;
           const [minX, minY, maxX, maxY] = item.bbox;
           const imageBounds = [[minY, minX], [maxY, maxX]];
           

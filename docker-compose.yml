@@ -37,6 +37,8 @@ services:
       - backend
     networks:
       - planet-network
+    volumes:
+      - ./ssl:/etc/nginx/ssl:ro
 
   # Nginx Proxy
   nginx:
@@ -49,10 +51,10 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - ./ssl:/etc/nginx/ssl:ro
+      - ./nginx_html:/usr/share/nginx/html:ro
       - nginx_logs:/var/log/nginx
     depends_on:
       - backend
-      - frontend
     networks:
       - planet-network
 
