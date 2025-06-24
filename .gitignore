@@ -143,3 +143,4 @@ dist-ssr/
 *.njsproj
 *.sln
 *.sw? Backend/src/static/embargos.geojson
+Backend/src/static/embargos.geojson
